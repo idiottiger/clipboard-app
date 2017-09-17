@@ -1,60 +1,87 @@
 package com.i2d2.clipboard;
 
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 
-/**
- * Created by frodochen on 9/4/17.
- */
-public class ClipboardClient {
+public class ClipboardClient extends Listener {
 
-    private int mLocalPort;
+    private static final String TAG = "ClipboardClient";
 
-    private Socket mSocket;
-    private ClipboardClientHandler mHandler;
+    private static final int DEFAULT_SERVER_PORT = 10024;
+    private static final int DEFAULT_CONNECT_TIMEOUT = 3000;
+
+    private int mPort;
+    private String mServerIpAddress;
+    private Client mClient;
 
 
-    public ClipboardClient(int port) {
-        mLocalPort = port;
-
-        mSocket = new Socket();
+    public ClipboardClient(String serverIpAddress) {
+        this(serverIpAddress, DEFAULT_SERVER_PORT);
     }
 
-    public void connect(String host, int port) {
+    public ClipboardClient(String serverIpAddress, int port) {
+        mServerIpAddress = serverIpAddress;
+        mPort = port;
+    }
+
+    public void connect() {
+        Log.log(TAG, "connect server: [" + mServerIpAddress + ":" + mPort + "]");
+        mClient = new Client();
+        mClient.start();
+        mClient.getKryo().register(ClipboardMessage.class);
         try {
-
-            InetSocketAddress serverEndAddress = null;
-            try {
-                serverEndAddress = new InetSocketAddress(InetAddress.getByName(host), port);
-            } catch (IOException e) {
-                Log.errExit("SERVER: [" + host + ":" + port + "] DOESN'T EXISTED", e, -1);
-            }
-            if (serverEndAddress != null) {
-                mSocket.connect(serverEndAddress, 10 * 1000);
-            }
-
-            mHandler = new ClipboardClientHandler(mSocket);
-            mHandler.process();
+            mClient.connect(DEFAULT_CONNECT_TIMEOUT, mServerIpAddress, mPort);
         } catch (IOException e) {
-            Log.errExit("SERVER: [" + host + ":" + port + "] CAN NOT CONNECT IT", e, -1);
+            e.printStackTrace();
+            Log.errExit("connect server: [" + mServerIpAddress + ":" + mPort + "] error:" + e.getMessage());
         }
-    }
 
-    public void quit() {
-        if (mHandler != null) {
-            mHandler.quit();
-        }
-        if (mSocket != null) {
+        mClient.addListener(this);
+        final Thread thread = mClient.getUpdateThread();
+        if (thread != null) {
             try {
-                mSocket.close();
-            } catch (IOException e) {
+                thread.join();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void close() {
+        Log.log(TAG, "close");
+        if (mClient != null) {
+            final Thread thread = mClient.getUpdateThread();
+            if (thread != null) {
+                thread.interrupt();
+            }
+        }
+    }
+
+    @Override
+    public void connected(Connection connection) {
+        super.connected(connection);
+        Log.log(TAG, "connected: " + connection.toString());
+    }
+
+    @Override
+    public void disconnected(Connection connection) {
+        super.disconnected(connection);
+        Log.log(TAG, "disconnected: " + connection.toString());
+    }
+
+    @Override
+    public void received(Connection connection, Object object) {
+        super.received(connection, object);
+        Log.log(TAG, "received: " + connection.toString());
+    }
+
+    @Override
+    public void idle(Connection connection) {
+        super.idle(connection);
+        Log.log(TAG, "idle: " + connection.toString());
     }
 
 }

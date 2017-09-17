@@ -17,4 +17,8 @@ public class Log {
         }
         System.exit(exitCode);
     }
+
+    public static void log(String tag, String message) {
+        System.out.println(tag + ":" + message);
+    }
 }

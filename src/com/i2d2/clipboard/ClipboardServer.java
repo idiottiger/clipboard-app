@@ -1,69 +1,72 @@
 package com.i2d2.clipboard;
 
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import com.esotericsoftware.kryonet.Server;
+
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashSet;
-import java.util.Set;
 
-/**
- * Created by frodochen on 9/4/17.
- */
-public class ClipboardServer {
+public class ClipboardServer extends Listener {
 
-    private ServerSocket mServerSocket;
+    private static final String TAG = "ClipboardServer";
 
-    private volatile boolean mIsRunning;
+    private static final int DEFAULT_PORT = 10024;
 
-    private final Set<ClipboardClientHandler> mHandlerSet = new HashSet<>();
+    private int mPort;
+
+    private Server mServer = null;
+
+    public ClipboardServer() {
+        this(DEFAULT_PORT);
+    }
 
     public ClipboardServer(int port) {
-
-        try {
-            mServerSocket = new ServerSocket(port);
-            System.out.println("SERVER PORT ["+port+"] OK");
-        } catch (IOException e) {
-            Log.errExit("CREATE SERVER ERROR: [" + port + "]", e, -1);
-        }
+        mPort = port;
     }
 
-    public void listen() {
-        if (!mIsRunning) {
-            mIsRunning = true;
-            new Thread(() -> {
-                while (mIsRunning) {
-                    try {
-                        System.out.println("START LISTEN CLIENT ...");
-                        final Socket socket = mServerSocket.accept();
-                        if (socket != null) {
-                            ClipboardClientHandler handler = new ClipboardClientHandler(socket);
-                            synchronized (mHandlerSet) {
-                                mHandlerSet.add(handler);
-                            }
-                            handler.process();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
-        }
-    }
 
-    public void quit() {
-        mIsRunning = false;
-        synchronized (mHandlerSet) {
-            for (ClipboardClientHandler handler : mHandlerSet) {
-                if (handler != null) {
-                    handler.quit();
-                }
-            }
-        }
+    public void start() {
+        Log.log(TAG, "start server ...");
+        mServer = new Server();
+        mServer.start();
+        mServer.getKryo().register(ClipboardMessage.class);
         try {
-            mServerSocket.close();
+            mServer.bind(mPort);
         } catch (IOException e) {
             e.printStackTrace();
+            Log.errExit("Server with port:[" + mPort + "] error:[" + e.getMessage() + "]");
+        }
+        mServer.addListener(this);
+    }
+
+    public void stop() {
+        Log.log(TAG, "stop server ...");
+        if (mServer != null) {
+            mServer.stop();
         }
     }
 
+    @Override
+    public void connected(Connection connection) {
+        super.connected(connection);
+        Log.log(TAG, "connected: " + connection.toString());
+    }
+
+    @Override
+    public void disconnected(Connection connection) {
+        super.disconnected(connection);
+        Log.log(TAG, "disconnected: " + connection.toString());
+    }
+
+    @Override
+    public void received(Connection connection, Object object) {
+        super.received(connection, object);
+        Log.log(TAG, "received: " + connection.toString());
+    }
+
+    @Override
+    public void idle(Connection connection) {
+        super.idle(connection);
+        Log.log(TAG, "idle: " + connection.toString());
+    }
 }
