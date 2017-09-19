@@ -5,10 +5,12 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class ClipboardClient extends Listener {
+public class ClipboardClient extends Listener implements ClipboardWatcher.OnClipboardContentChangeListener {
 
     private static final String TAG = "ClipboardClient";
+    private static AtomicInteger sClientIndex = new AtomicInteger();
 
     private static final int DEFAULT_SERVER_PORT = 10024;
     private static final int DEFAULT_CONNECT_TIMEOUT = 3000;
@@ -16,18 +18,22 @@ public class ClipboardClient extends Listener {
     private int mPort;
     private String mServerIpAddress;
     private Client mClient;
+    private final Object mLocker = new Object();
+    private ClipboardWatcher mClipboardWatcher;
 
-
-    public ClipboardClient(String serverIpAddress) {
-        this(serverIpAddress, DEFAULT_SERVER_PORT);
+    public ClipboardClient() {
+        mClipboardWatcher = new ClipboardWatcher();
     }
 
-    public ClipboardClient(String serverIpAddress, int port) {
+
+    public void connect(String serverIpAddress) {
+        connect(serverIpAddress, DEFAULT_SERVER_PORT);
+    }
+
+
+    public void connect(String serverIpAddress, int port) {
         mServerIpAddress = serverIpAddress;
         mPort = port;
-    }
-
-    public void connect() {
         Log.log(TAG, "connect server: [" + mServerIpAddress + ":" + mPort + "]");
         mClient = new Client();
         mClient.start();
@@ -38,7 +44,9 @@ public class ClipboardClient extends Listener {
             e.printStackTrace();
             Log.errExit("connect server: [" + mServerIpAddress + ":" + mPort + "] error:" + e.getMessage());
         }
-
+        mClipboardWatcher.setOnClipboardContentChangeListener(this);
+        mClipboardWatcher.startWatch();
+        mClient.setName("client:" + sClientIndex.incrementAndGet());
         mClient.addListener(this);
         final Thread thread = mClient.getUpdateThread();
         if (thread != null) {
@@ -52,6 +60,7 @@ public class ClipboardClient extends Listener {
 
     public void close() {
         Log.log(TAG, "close");
+        mClipboardWatcher.stopWatch();
         if (mClient != null) {
             final Thread thread = mClient.getUpdateThread();
             if (thread != null) {
@@ -63,25 +72,34 @@ public class ClipboardClient extends Listener {
     @Override
     public void connected(Connection connection) {
         super.connected(connection);
-        Log.log(TAG, "connected: " + connection.toString());
+        Log.log(TAG, "connected: [" + connection.toString() + "]");
     }
 
     @Override
     public void disconnected(Connection connection) {
         super.disconnected(connection);
-        Log.log(TAG, "disconnected: " + connection.toString());
+        Log.log(TAG, "disconnected: [" + connection.toString() + "]");
     }
 
     @Override
     public void received(Connection connection, Object object) {
         super.received(connection, object);
-        Log.log(TAG, "received: " + connection.toString());
+        if (object != null && object instanceof ClipboardMessage) {
+            String content = ((ClipboardMessage) object).content;
+            Log.log(TAG, "-------------- received ------------------ \n" + content);
+            Log.log(TAG, "------------------------------------------");
+            mClipboardWatcher.insertContentToClipboard(content);
+        }
     }
 
     @Override
-    public void idle(Connection connection) {
-        super.idle(connection);
-        Log.log(TAG, "idle: " + connection.toString());
+    public void onClipboardContentChanged(String content) {
+        synchronized (mLocker) {
+            Log.log(TAG, "onClipboardContentChanged: [" + content+"] ===> TO [SERVER]");
+            ClipboardMessage clipboardMessage = new ClipboardMessage();
+            clipboardMessage.content = content;
+            Log.log(TAG, "sendTCP: " + content);
+            mClient.sendTCP(clipboardMessage);
+        }
     }
-
 }
