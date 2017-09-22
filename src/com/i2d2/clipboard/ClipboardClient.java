@@ -86,8 +86,7 @@ public class ClipboardClient extends Listener implements ClipboardWatcher.OnClip
         super.received(connection, object);
         if (object != null && object instanceof ClipboardMessage) {
             String content = ((ClipboardMessage) object).content;
-            Log.log(TAG, "-------------- received ------------------ \n" + content);
-            Log.log(TAG, "------------------------------------------");
+            Log.log(TAG, " ===========> [RECEIVE] ===========> \n[\n" + content + "\n]");
             mClipboardWatcher.insertContentToClipboard(content);
         }
     }
@@ -95,10 +94,9 @@ public class ClipboardClient extends Listener implements ClipboardWatcher.OnClip
     @Override
     public void onClipboardContentChanged(String content) {
         synchronized (mLocker) {
-            Log.log(TAG, "onClipboardContentChanged: [" + content+"] ===> TO [SERVER]");
+            Log.log(TAG, " <=========== [SEND] <=========== \n[\n" + content + "\n]");
             ClipboardMessage clipboardMessage = new ClipboardMessage();
             clipboardMessage.content = content;
-            Log.log(TAG, "sendTCP: " + content);
             mClient.sendTCP(clipboardMessage);
         }
     }

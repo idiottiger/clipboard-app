@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 /**
  * Created by frodochen on 9/18/17.
@@ -42,7 +43,7 @@ public class UbuntuOSClipboardManager implements IClipboardManager {
             mClipboardManager.store();
             mCurrentClipboardContent = content;
             try {
-                FileUtils.write(mClipboardFile, mCurrentClipboardContent,"utf-8",true);
+                FileUtils.writeLines(mClipboardFile, "utf-8", Arrays.asList(mCurrentClipboardContent), true);
             } catch (IOException e) {
                 e.printStackTrace();
             }

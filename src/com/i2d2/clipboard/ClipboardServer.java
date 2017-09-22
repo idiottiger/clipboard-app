@@ -71,15 +71,14 @@ public class ClipboardServer extends Listener implements ClipboardWatcher.OnClip
         super.received(connection, object);
         if (object != null && object instanceof ClipboardMessage) {
             String content = ((ClipboardMessage) object).content;
-            Log.log(TAG, "-------------- received ------------------ \n" + content);
-            Log.log(TAG, "------------------------------------------");
+            Log.log(TAG, " ===========> [RECEIVE] ===========> \n[\n" + content + "\n]");
             mClipboardWatcher.insertContentToClipboard(content);
         }
     }
 
     @Override
     public void onClipboardContentChanged(String content) {
-        Log.log(TAG, "onClipboardContentChanged: [" + content+"] ===> TO [CLIENTS]");
+        Log.log(TAG, " <=========== [SEND] <=========== \n[\n" + content + "\n]");
         ClipboardMessage clipboardMessage = new ClipboardMessage();
         clipboardMessage.content = content;
         mServer.sendToAllTCP(clipboardMessage);

@@ -5,7 +5,7 @@ package com.i2d2.clipboard;
  */
 public class ClipboardWatcher extends Thread {
 
-    private static final int DEFAULT_SLEEP_TIME = 2000;
+    private static final int DEFAULT_SLEEP_TIME = 1000;
 
     private volatile boolean isQuit;
     private IClipboardManager mClipboardManager;
@@ -43,7 +43,7 @@ public class ClipboardWatcher extends Thread {
             synchronized (mLock) {
                 String stringClipboard = mClipboardManager.getClipboardContent();
                 if (stringClipboard != null && (mPreClipboardContent == null || !mPreClipboardContent.equals(stringClipboard))) {
-                    System.out.println("Get Clipboard: [" + stringClipboard + "]");
+                    //System.out.println("Get Clipboard: [" + stringClipboard + "]");
                     if (mChangeListener != null) {
                         mChangeListener.onClipboardContentChanged(stringClipboard);
                     }
