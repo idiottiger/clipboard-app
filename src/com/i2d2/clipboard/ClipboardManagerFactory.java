@@ -10,7 +10,7 @@ public class ClipboardManagerFactory {
         System.out.println("Current os: " + os);
         IClipboardManager clipboardManager = null;
         if (os.contains("nix") || os.contains("nux") || os.indexOf("aix") > 0) {
-            clipboardManager = new NormalClipboardManager();
+            clipboardManager = new UbuntuOSClipboardManager();
         } else {
             clipboardManager = new NormalClipboardManager();
         }
